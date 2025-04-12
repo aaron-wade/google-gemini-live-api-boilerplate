@@ -65,7 +65,7 @@ export class AudioRecorder extends EventEmitter {
       );
 
       this.recordingWorklet.port.onmessage = async (ev: MessageEvent) => {
-        // worklet processes recording floats and messages converted buffer
+        // Worklet processes recording floats and messages converted buffer
         const arrayBuffer = ev.data.data.int16arrayBuffer;
 
         if (arrayBuffer) {
@@ -93,8 +93,8 @@ export class AudioRecorder extends EventEmitter {
   }
 
   stop() {
-    // its plausible that stop would be called before start completes
-    // such as if the websocket immediately hangs up
+    // It is plausible that stop would be called before start completes,
+    // such as if the Websocket immediately hangs up
     const handleStop = () => {
       this.source?.disconnect();
       this.stream?.getTracks().forEach((track) => track.stop());

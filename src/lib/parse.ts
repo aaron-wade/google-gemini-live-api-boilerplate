@@ -14,8 +14,8 @@
  * limitations under the License.
  */
 
-// jest-dom adds custom jest matchers for asserting on DOM nodes.
-// allows you to do things like:
-// expect(element).toHaveTextContent(/react/i)
-// learn more: https://github.com/testing-library/jest-dom
-import '@testing-library/jest-dom';
+export const parseJSON = (str: string) => {
+  const start = str.indexOf('{');
+  const end = str.lastIndexOf('}') + 1;
+  return JSON.parse(str.substring(start, end));
+};

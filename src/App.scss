@@ -26,9 +26,9 @@
   scrollbar-color: var(--gray-600) var(--gray-900);
   scrollbar-width: thin;
 
-  --font-family: "Space Mono", monospace;
+  --font-family: 'Space Mono', monospace;
 
-  /* */
+  /* Colors */
   --Neutral-00: #000;
   --Neutral-5: #181a1b;
   --Neutral-10: #1c1f21;
@@ -53,40 +53,36 @@
 }
 
 body {
-  font-family: "Space Mono", monospace;
+  font-family: 'Space Mono', monospace;
   background: var(--Neutral-30);
 }
 
 .material-symbols-outlined {
   &.filled {
-    font-variation-settings:
-      "FILL" 1,
-      "wght" 400,
-      "GRAD" 0,
-      "opsz" 24;
+    font-variation-settings: 'FILL' 1, 'wght' 400, 'GRAD' 0, 'opsz' 24;
   }
 }
 
 .space-mono-regular {
-  font-family: "Space Mono", monospace;
+  font-family: 'Space Mono', monospace;
   font-weight: 400;
   font-style: normal;
 }
 
 .space-mono-bold {
-  font-family: "Space Mono", monospace;
+  font-family: 'Space Mono', monospace;
   font-weight: 700;
   font-style: normal;
 }
 
 .space-mono-regular-italic {
-  font-family: "Space Mono", monospace;
+  font-family: 'Space Mono', monospace;
   font-weight: 400;
   font-style: italic;
 }
 
 .space-mono-bold-italic {
-  font-family: "Space Mono", monospace;
+  font-family: 'Space Mono', monospace;
   font-weight: 700;
   font-style: italic;
 }
@@ -111,7 +107,8 @@ body {
   flex-direction: column;
 }
 
-@media (prefers-reduced-motion: no-preference) {}
+@media (prefers-reduced-motion: no-preference) {
+}
 
 .streaming-console {
   background: var(--Neutral-5);
@@ -129,7 +126,7 @@ body {
   .disabled {
     pointer-events: none;
 
-    >* {
+    > * {
       pointer-events: none;
     }
   }
@@ -151,6 +148,8 @@ body {
     flex: 1;
     align-items: center;
     justify-content: center;
+    position: relative;
+    width: 100%;
   }
 
   .function-call {
@@ -162,7 +161,7 @@ body {
   }
 }
 
-/* video player */
+/* Video player */
 .stream {
   flex-grow: 1;
   max-width: 90%;

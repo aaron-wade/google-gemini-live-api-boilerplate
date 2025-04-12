@@ -14,12 +14,21 @@
  * limitations under the License.
  */
 
-import React from 'react';
-import { render, screen } from '@testing-library/react';
-import App from './App';
+// Add any LLM prompts used by your application to this file.
+// An example prompt is provided below.
 
-test('renders learn react link', () => {
-  render(<App />);
-  const linkElement = screen.getByText(/learn react/i);
-  expect(linkElement).toBeInTheDocument();
-});
+const EXAMPLE_PROMPT_TEMPLATE = `Write me a poem about {topic}`;
+
+const constructPromptFromTemplate = (
+  template: string,
+  replacements: Record<string, string>
+): string => {
+  return Object.entries(replacements).reduce(
+    (acc, [placeholder, value]) => acc.replaceAll(`{${placeholder}}`, value),
+    template
+  );
+};
+
+export const constructExamplePrompt = (topic: string) => {
+  return constructPromptFromTemplate(EXAMPLE_PROMPT_TEMPLATE, { topic });
+};

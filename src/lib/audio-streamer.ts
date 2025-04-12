@@ -30,7 +30,7 @@ export class AudioStreamer {
   public source: AudioBufferSourceNode;
   private isStreamComplete: boolean = false;
   private checkInterval: number | null = null;
-  private initialBufferTime: number = 0.1; //0.1 // 100ms initial buffer
+  private initialBufferTime: number = 0.1; // Initial buffer of 100ms
   private endOfQueueAudioSource: AudioBufferSourceNode | null = null;
 
   public onComplete = () => {};
@@ -49,11 +49,11 @@ export class AudioStreamer {
   ): Promise<this> {
     let workletsRecord = registeredWorklets.get(this.context);
     if (workletsRecord && workletsRecord[workletName]) {
-      // the worklet already exists on this context
-      // add the new handler to it
+      // The worklet already exists on this context
+      // Add the new handler to it
       workletsRecord[workletName].handlers.push(handler);
       return Promise.resolve(this);
-      //throw new Error(`Worklet ${workletName} already exists on context`);
+      // throw new Error(`Worklet ${workletName} already exists on context`);
     }
 
     if (!workletsRecord) {
@@ -61,14 +61,14 @@ export class AudioStreamer {
       workletsRecord = registeredWorklets.get(this.context)!;
     }
 
-    // create new record to fill in as becomes available
+    // Create a new record to fill in as it becomes available
     workletsRecord[workletName] = { handlers: [handler] };
 
     const src = createWorketFromSrc(workletName, workletSrc);
     await this.context.audioWorklet.addModule(src);
     const worklet = new AudioWorkletNode(this.context, workletName);
 
-    //add the node into the map
+    // Add the node into the map
     workletsRecord[workletName].node = worklet;
 
     return this;
@@ -84,9 +84,6 @@ export class AudioStreamer {
         float32Array[i] = int16 / 32768;
       } catch (e) {
         console.error(e);
-        // console.log(
-        //   `dataView.length: ${dataView.byteLength},  i * 2: ${i * 2}`,
-        // );
       }
     }
 
@@ -168,11 +165,7 @@ export class AudioStreamer {
         });
       }
 
-      // i added this trying to fix clicks
-      // this.gainNode.gain.setValueAtTime(0, 0);
-      // this.gainNode.gain.linearRampToValueAtTime(1, 1);
-
-      // Ensure we never schedule in the past
+      // Ensure that we never schedule in the past
       const startTime = Math.max(this.scheduledTime, this.context.currentTime);
       source.start(startTime);
 
@@ -255,7 +248,8 @@ export class AudioStreamer {
   }
 }
 
-// // Usage example:
+// USAGE EXAMPLE
+//
 // const audioStreamer = new AudioStreamer();
 //
 // // In your streaming code:
@@ -263,8 +257,8 @@ export class AudioStreamer {
 //   audioStreamer.handleChunk(chunk);
 // }
 //
-// // To start playing (call this in response to a user interaction)
+// // To start playing (call this in response to a user interaction):
 // await audioStreamer.resume();
 //
-// // To stop playing
-// // audioStreamer.stop();
+// // To stop playing:
+// audioStreamer.stop();

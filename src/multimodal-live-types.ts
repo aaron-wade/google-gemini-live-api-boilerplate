@@ -43,17 +43,18 @@ export type LiveGenerationConfig = GenerationConfig & {
     voiceConfig?: {
       prebuiltVoiceConfig?: {
         voiceName:
-          | 'Puck'
-          | 'Charon'
-          | 'Kore'
-          | 'Fenrir'
           | 'Aoede'
+          | 'Charon'
+          | 'Fenrir'
+          | 'Kore'
           | 'Leda'
           | 'Orus'
+          | 'Puck'
           | 'Zephyr'
           | string;
       };
     };
+    languageCode?: string;
   };
 };
 

@@ -20,6 +20,7 @@ import cn from 'classnames';
 import { LiveAPIProvider } from './contexts/LiveAPIContext';
 import ControlTray from './components/control-tray/ControlTray';
 import SidePanel from './components/side-panel/SidePanel';
+import { DEFAULT_WS_ENDPOINT } from './lib/constants';
 
 import './App.scss';
 
@@ -31,7 +32,7 @@ if (typeof API_KEY !== 'string') {
 }
 
 const host = 'generativelanguage.googleapis.com';
-const uri = `wss://${host}/ws/google.ai.generativelanguage.v1alpha.GenerativeService.BidiGenerateContent`;
+const uri = `wss://${host}/ws/${DEFAULT_WS_ENDPOINT}`;
 
 /**
  * Main application component that provides a streaming interface for Live API.

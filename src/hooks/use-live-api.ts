@@ -19,15 +19,17 @@ import {
   MultimodalLiveAPIClientConnection,
   MultimodalLiveClient,
 } from '../lib/multimodal-live-client';
-import { LiveConfig } from '../multimodal-live-types';
 import { AudioStreamer } from '../lib/audio-streamer';
 import { audioContext } from '../lib/utils';
 import VolMeterWorket from '../lib/worklets/vol-meter';
 
+import { LiveSessionConfig } from '../lib/types';
+import { DEFAULT_LIVE_API_MODEL } from '../lib/constants';
+
 export type UseLiveAPIResults = {
   client: MultimodalLiveClient;
-  setConfig: (config: LiveConfig) => void;
-  config: LiveConfig;
+  setConfig: (config: LiveSessionConfig) => void;
+  config: LiveSessionConfig;
   connected: boolean;
   connect: () => Promise<void>;
   disconnect: () => Promise<void>;
@@ -45,8 +47,8 @@ export function useLiveAPI({
   const audioStreamerRef = useRef<AudioStreamer | null>(null);
 
   const [connected, setConnected] = useState(false);
-  const [config, setConfig] = useState<LiveConfig>({
-    model: 'models/gemini-2.0-flash-live-001',
+  const [config, setConfig] = useState<LiveSessionConfig>({
+    model: DEFAULT_LIVE_API_MODEL,
   });
   const [volume, setVolume] = useState(0);
 
@@ -71,21 +73,28 @@ export function useLiveAPI({
       setConnected(false);
     };
 
-    const stopAudioStreamer = () => audioStreamerRef.current?.stop();
+    const stopAudioStreamer = () => {
+      if (audioStreamerRef.current) {
+        audioStreamerRef.current.stop();
+      }
+    };
 
-    const onAudio = (data: ArrayBuffer) =>
-      audioStreamerRef.current?.addPCM16(new Uint8Array(data));
+    const onAudio = (data: ArrayBuffer) => {
+      if (audioStreamerRef.current) {
+        audioStreamerRef.current.addPCM16(new Uint8Array(data));
+      }
+    };
 
-    client
-      .on('close', onClose)
-      .on('interrupted', stopAudioStreamer)
-      .on('audio', onAudio);
+    // Bind event listeners
+    client.on('close', onClose);
+    client.on('interrupted', stopAudioStreamer);
+    client.on('audio', onAudio);
 
     return () => {
-      client
-        .off('close', onClose)
-        .off('interrupted', stopAudioStreamer)
-        .off('audio', onAudio);
+      // Clean up event listeners
+      client.off('close', onClose);
+      client.off('interrupted', stopAudioStreamer);
+      client.off('audio', onAudio);
     };
   }, [client]);
 

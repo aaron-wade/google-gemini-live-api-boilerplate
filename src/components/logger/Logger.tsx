@@ -16,29 +16,21 @@
 
 import './logger.scss';
 
-import { Part } from '@google/generative-ai';
+import { Part, Content } from '@google/genai';
 import cn from 'classnames';
 import { ReactNode } from 'react';
 import { useLoggerStore } from '../../lib/store-logger';
-import SyntaxHighlighter from 'react-syntax-highlighter';
-import { vs2015 as dark } from 'react-syntax-highlighter/dist/esm/styles/hljs';
+import { Prism as SyntaxHighlighter } from 'react-syntax-highlighter';
+import { vscDarkPlus as dark } from 'react-syntax-highlighter/dist/esm/styles/prism';
+import { StreamingLog } from '../../lib/types';
+import { isPlainObject } from '../../lib/utils';
 import {
-  ClientContentMessage,
-  isClientContentMessage,
-  isInterrupted,
-  isModelTurn,
-  isServerContentMessage,
-  isToolCallCancellationMessage,
-  isToolCallMessage,
-  isToolResponseMessage,
-  isTurnComplete,
-  ModelTurn,
-  ServerContentMessage,
-  StreamingLog,
-  ToolCallCancellationMessage,
-  ToolCallMessage,
-  ToolResponseMessage,
-} from '../../multimodal-live-types';
+  LiveClientContent,
+  LiveServerContent,
+  LiveServerToolCall,
+  LiveServerToolCallCancellation,
+  LiveClientToolResponse,
+} from '@google/genai';
 
 const formatTime = (d: Date) => d.toLocaleTimeString().slice(0, -3);
 
@@ -84,7 +76,8 @@ const AnyMessage = ({ message }: Message) => (
   <pre>{JSON.stringify(message, null, '  ')}</pre>
 );
 
-function tryParseCodeExecutionResult(output: string) {
+function tryParseCodeExecutionResult(output: string | undefined): string {
+  if (!output) return '';
   try {
     const json = JSON.parse(output);
     return JSON.stringify(json, null, '  ');
@@ -93,61 +86,86 @@ function tryParseCodeExecutionResult(output: string) {
   }
 }
 
-const RenderPart = ({ part }: { part: Part }) =>
-  part.text && part.text.length ? (
-    <p className="part part-text">{part.text}</p>
-  ) : part.executableCode ? (
-    <div className="part part-executableCode">
-      <h5>executableCode: {part.executableCode.language}</h5>
-      <SyntaxHighlighter
-        language={part.executableCode.language.toLowerCase()}
-        style={dark}
-      >
-        {part.executableCode.code}
-      </SyntaxHighlighter>
-    </div>
-  ) : part.codeExecutionResult ? (
-    <div className="part part-codeExecutionResult">
-      <h5>codeExecutionResult: {part.codeExecutionResult.outcome}</h5>
-      <SyntaxHighlighter language="json" style={dark}>
-        {tryParseCodeExecutionResult(part.codeExecutionResult.output)}
-      </SyntaxHighlighter>
-    </div>
-  ) : (
+const RenderPart = ({ part }: { part: Part }) => {
+  if (part.text && part.text.length) {
+    return <p className="part part-text">{part.text}</p>;
+  }
+  if (part.executableCode) {
+    const language = part.executableCode.language?.toLowerCase() || 'text';
+    return (
+      <div className="part part-executableCode">
+        <h5>executableCode: {part.executableCode.language}</h5>
+        <SyntaxHighlighter
+          language={language}
+          style={dark}
+          customStyle={{ padding: '1em' }}
+        >
+          {[part.executableCode.code] as string[]}
+        </SyntaxHighlighter>
+      </div>
+    );
+  }
+  if (part.codeExecutionResult) {
+    return (
+      <div className="part part-codeExecutionResult">
+        <h5>codeExecutionResult: {part.codeExecutionResult.outcome}</h5>
+        <SyntaxHighlighter
+          language="json"
+          style={dark}
+          customStyle={{ padding: '1em' }}
+        >
+          {
+            [
+              tryParseCodeExecutionResult(part.codeExecutionResult.output),
+            ] as string[]
+          }
+        </SyntaxHighlighter>
+      </div>
+    );
+  }
+  return (
     <div className="part part-inlinedata">
       <h5>Inline Data: {part.inlineData?.mimeType}</h5>
     </div>
   );
+};
 
 const ClientContentLog = ({ message }: Message) => {
-  const { turns, turnComplete } = (message as ClientContentMessage)
-    .clientContent;
+  const content = message as LiveClientContent;
+  if (!content.turns) return null;
+
   return (
     <div className="rich-log client-content user">
       <h4 className="roler-user">User</h4>
-      {turns.map((turn, i) => (
+      {content.turns.map((turn: Content, i: number) => (
         <div key={`message-turn-${i}`}>
           {turn.parts
-            .filter((part) => !(part.text && part.text === '\n'))
-            .map((part, j) => (
+            ?.filter((part: Part) => !(part.text && part.text === '\n'))
+            .map((part: Part, j: number) => (
               <RenderPart part={part} key={`message-turh-${i}-part-${j}`} />
             ))}
         </div>
       ))}
-      {!turnComplete ? <span>turnComplete: false</span> : ''}
+      {!content.turnComplete ? <span>turnComplete: false</span> : ''}
     </div>
   );
 };
 
 const ToolCallLog = ({ message }: Message) => {
-  const { toolCall } = message as ToolCallMessage;
+  const { toolCall } = message as { toolCall: LiveServerToolCall };
+  if (!toolCall?.functionCalls) return null;
+
   return (
     <div className={cn('rich-log tool-call')}>
       {toolCall.functionCalls.map((fc, i) => (
         <div key={fc.id} className="part part-functioncall">
           <h5>Function call: {fc.name}</h5>
-          <SyntaxHighlighter language="json" style={dark}>
-            {JSON.stringify(fc, null, '  ')}
+          <SyntaxHighlighter
+            language="json"
+            style={dark}
+            customStyle={{ padding: '1em' }}
+          >
+            {[JSON.stringify(fc, null, '  ')] as string[]}
           </SyntaxHighlighter>
         </div>
       ))}
@@ -155,48 +173,65 @@ const ToolCallLog = ({ message }: Message) => {
   );
 };
 
-const ToolCallCancellationLog = ({ message }: Message): JSX.Element => (
-  <div className={cn('rich-log tool-call-cancellation')}>
-    <span>
-      {' '}
-      ids:{' '}
-      {(message as ToolCallCancellationMessage).toolCallCancellation.ids.map(
-        (id) => (
+const ToolCallCancellationLog = ({ message }: Message): JSX.Element => {
+  const { toolCallCancellation } = message as {
+    toolCallCancellation: LiveServerToolCallCancellation;
+  };
+  if (!toolCallCancellation?.ids)
+    return <div className={cn('rich-log tool-call-cancellation')} />;
+
+  return (
+    <div className={cn('rich-log tool-call-cancellation')}>
+      <span>
+        {' '}
+        ids:{' '}
+        {toolCallCancellation.ids.map((id) => (
           <span className="inline-code" key={`cancel-${id}`}>
             "{id}"
           </span>
-        )
-      )}
-    </span>
-  </div>
-);
+        ))}
+      </span>
+    </div>
+  );
+};
 
-const ToolResponseLog = ({ message }: Message): JSX.Element => (
-  <div className={cn('rich-log tool-response')}>
-    {(message as ToolResponseMessage).toolResponse.functionResponses.map(
-      (fc) => (
+const ToolResponseLog = ({ message }: Message): JSX.Element => {
+  const { toolResponse } = message as { toolResponse: LiveClientToolResponse };
+  if (!toolResponse?.functionResponses)
+    return <div className={cn('rich-log tool-response')} />;
+
+  return (
+    <div className={cn('rich-log tool-response')}>
+      {toolResponse.functionResponses.map((fc) => (
         <div key={`tool-response-${fc.id}`} className="part">
           <h5>Function Response: {fc.id}</h5>
-          <SyntaxHighlighter language="json" style={dark}>
-            {JSON.stringify(fc.response, null, '  ')}
+          <SyntaxHighlighter
+            language="json"
+            style={dark}
+            customStyle={{ padding: '1em' }}
+          >
+            {[JSON.stringify(fc.response, null, '  ')] as string[]}
           </SyntaxHighlighter>
         </div>
-      )
-    )}
-  </div>
-);
+      ))}
+    </div>
+  );
+};
 
 const ModelTurnLog = ({ message }: Message): JSX.Element => {
-  const serverContent = (message as ServerContentMessage).serverContent;
-  const { modelTurn } = serverContent as ModelTurn;
-  const { parts } = modelTurn;
+  const { serverContent } = message as { serverContent: LiveServerContent };
+  if (!serverContent?.modelTurn?.parts) {
+    return (
+      <div className="rich-log model-turn model">No content available</div>
+    );
+  }
 
   return (
     <div className="rich-log model-turn model">
       <h4 className="role-model">Model</h4>
-      {parts
-        .filter((part) => !(part.text && part.text === '\n'))
-        .map((part, j) => (
+      {serverContent.modelTurn.parts
+        .filter((part: Part) => !(part.text && part.text === '\n'))
+        .map((part: Part, j: number) => (
           <RenderPart part={part} key={`model-turn-part-${j}`} />
         ))}
     </div>
@@ -211,6 +246,48 @@ export type LoggerFilterType = 'conversations' | 'tools' | 'none';
 export type LoggerProps = {
   filter: LoggerFilterType;
 };
+
+const isToolCallMessage = (
+  message: any
+): message is { toolCall: LiveServerToolCall } =>
+  isPlainObject(message) &&
+  'toolCall' in message &&
+  message.toolCall?.functionCalls !== undefined;
+
+const isToolResponseMessage = (
+  message: any
+): message is { toolResponse: LiveClientToolResponse } =>
+  isPlainObject(message) &&
+  'toolResponse' in message &&
+  message.toolResponse?.functionResponses !== undefined;
+
+const isToolCallCancellationMessage = (
+  message: any
+): message is { toolCallCancellation: LiveServerToolCallCancellation } =>
+  isPlainObject(message) &&
+  'toolCallCancellation' in message &&
+  message.toolCallCancellation?.ids !== undefined;
+
+const isClientContentMessage = (message: any): message is LiveClientContent =>
+  isPlainObject(message) && 'turns' in message && Array.isArray(message.turns);
+
+const isServerContentMessage = (
+  message: any
+): message is { serverContent: LiveServerContent } =>
+  isPlainObject(message) &&
+  'serverContent' in message &&
+  message.serverContent !== undefined;
+
+const isInterrupted = (serverContent: any): boolean =>
+  isPlainObject(serverContent) && 'interrupted' in serverContent;
+
+const isTurnComplete = (serverContent: any): boolean =>
+  isPlainObject(serverContent) && 'turnComplete' in serverContent;
+
+const isModelTurn = (serverContent: any): boolean =>
+  isPlainObject(serverContent) &&
+  'modelTurn' in serverContent &&
+  serverContent.modelTurn?.parts !== undefined;
 
 const filters: Record<LoggerFilterType, (log: StreamingLog) => boolean> = {
   tools: (log: StreamingLog) =>

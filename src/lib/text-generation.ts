@@ -15,14 +15,16 @@
  */
 
 import {
-  FinishReason,
-  GenerateContentRequest,
-  GoogleGenerativeAI,
-  HarmBlockThreshold,
+  GoogleGenAI,
   HarmCategory,
-  Part,
+  HarmBlockThreshold,
   SafetySetting,
-} from '@google/generative-ai';
+  Part,
+  Content,
+  GenerationConfig,
+  GenerateContentResponse,
+  FinishReason,
+} from '@google/genai';
 
 const GEMINI_API_KEY = process.env.REACT_APP_GEMINI_API_KEY;
 
@@ -72,24 +74,25 @@ export async function generateText(
     throw new Error('Gemini API key is missing or empty');
   }
 
-  const genAI = new GoogleGenerativeAI(GEMINI_API_KEY);
-  const model = genAI.getGenerativeModel({ model: modelName });
-
+  const genAI = new GoogleGenAI({ apiKey: GEMINI_API_KEY });
   const parts: Part[] = [{ text: prompt }];
+  const content: Content = { role: 'user', parts };
 
-  const generationConfig = {
+  const generationConfig: GenerationConfig = {
     temperature,
   };
 
-  const request: GenerateContentRequest = {
-    contents: [{ role: 'user', parts }],
-    generationConfig,
-    safetySettings,
-  };
-
   try {
-    const result = await model.generateContent(request);
-    const response = result.response;
+    const result: GenerateContentResponse = await genAI.models.generateContent({
+      model: modelName,
+      contents: [content],
+      config: {
+        ...generationConfig,
+        safetySettings,
+      },
+    });
+
+    const response = result;
 
     // Check for prompt blockage
     if (response.promptFeedback?.blockReason) {
@@ -121,7 +124,12 @@ export async function generateText(
       }
     }
 
-    return response.text();
+    const text = response.text;
+    if (!text) {
+      throw new Error('Content generation failed: No text content returned.');
+    }
+
+    return text;
   } catch (error) {
     console.error(
       'An error occurred during Gemini API call or response processing:',

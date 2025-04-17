@@ -15,19 +15,28 @@
  */
 
 import { create } from 'zustand';
-import { StreamingLog } from '../multimodal-live-types';
+import { StreamingLog } from './types';
 
 interface StoreLoggerState {
   maxLogs: number;
   logs: StreamingLog[];
-  log: (streamingLog: StreamingLog) => void;
+  addLog: (log: StreamingLog) => void;
   clearLogs: () => void;
+  setMaxLogs: (n: number) => void;
 }
 
+/**
+ * Zustand store for managing application logs.
+ * Provides functionality to add, clear, and maintain a fixed-size log history.
+ * Implements deduplication of consecutive identical logs.
+ */
 export const useLoggerStore = create<StoreLoggerState>((set, get) => ({
-  maxLogs: 500,
+  // Maximum number of logs to keep in memory
+  maxLogs: 1000,
+  // Array of log entries
   logs: [],
-  log: ({ date, type, message }: StreamingLog) => {
+  // Add a new log entry, maintaining the maximum size limit and deduplicating consecutive identical logs
+  addLog: ({ date, type, message }: StreamingLog) => {
     set((state) => {
       const prevLog = state.logs.at(-1);
       if (prevLog && prevLog.type === type && prevLog.message === message) {
@@ -55,10 +64,8 @@ export const useLoggerStore = create<StoreLoggerState>((set, get) => ({
       };
     });
   },
-
-  clearLogs: () => {
-    console.log('clear log');
-    set({ logs: [] });
-  },
+  // Clear all logs from the store
+  clearLogs: () => set({ logs: [] }),
+  // Update the maximum number of logs to keep
   setMaxLogs: (n: number) => set({ maxLogs: n }),
 }));

@@ -18,6 +18,8 @@ import { useRef, useState } from 'react';
 import cn from 'classnames';
 
 import { LiveAPIProvider } from './contexts/LiveAPIContext';
+import { LIVE_API_WEBSOCKET_URI } from './lib/constants';
+
 import ControlTray from './components/control-tray/ControlTray';
 import SidePanel from './components/side-panel/SidePanel';
 
@@ -29,9 +31,6 @@ if (typeof API_KEY !== 'string') {
     'Missing required environment variable: REACT_APP_GEMINI_API_KEY'
   );
 }
-
-const host = 'generativelanguage.googleapis.com';
-const uri = `wss://${host}/ws/google.ai.generativelanguage.v1alpha.GenerativeService.BidiGenerateContent`;
 
 /**
  * Main application component that provides a streaming interface for Live API.
@@ -46,7 +45,7 @@ function App() {
 
   return (
     <div className="App">
-      <LiveAPIProvider url={uri} apiKey={API_KEY}>
+      <LiveAPIProvider url={LIVE_API_WEBSOCKET_URI} apiKey={API_KEY}>
         <div className="streaming-console">
           <SidePanel />
           <main>
